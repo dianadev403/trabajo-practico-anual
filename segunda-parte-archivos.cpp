@@ -19,7 +19,7 @@ typedef tRCandidato tVecCandidatos[candidatosPorLista];
 struct tRLista
 {
   int numero;
-  string nombre;
+  string nombreLista;
   tVecCandidatos candidatos;
 };
 typedef tRLista tVecListas[numListas];
@@ -31,6 +31,7 @@ struct tRVoto
   int edad, cantHombre, cantMujer, cantOtro, cant16_18, cant18_30, cant30_50, cantmas50;
   bool valido;
 };
+typedef tRVoto tVecVotos;
 
 struct tBanca
 {
@@ -41,65 +42,47 @@ int vectorNumBancaOb[5];
 
 // prototipos
 void guardarListasEnArchivo();
-void pedirLista(tRLista &rLista, bool &fin);
-void ingresarVoto(tRVoto &rVoto, bool &fin);
+void pedirLista(tRLista &rLista);
 
 void guardarVotosEnArchivo(std::vector<tRVoto> &vVotos, int maxVotos);
 void pedirVoto(tRVoto &rVoto);
 void ordenarPorNumeroLista(std::vector<tRVoto> &vVotos, int cantVotos);
 
 void imprimirVotos(std::vector<tRVoto> &vVotos, int cantVotos);
-void leerArchivo(const char *nombreArchivo);
+int cantRegistros(FILE *archivo);
+void cargarVectoresDesdeArchivo(FILE *archivo, tVecListas vListas, tVecVotos vVotos[]);
 
 // Punto 2
 void guardarListasEnArchivo()
 {
   tRLista rLista;
-  bool fin;
 
   FILE *fLista;
   fLista = fopen("listas.dat", "wb");
 
   for (int i = 0; i < numListas; ++i)
   {
-
-    fin = false;
-
-    pedirLista(rLista, fin);
-
-    while (!fin)
-    {
-      fwrite(&rLista, sizeof(rLista), 1, fLista);
-      pedirLista(rLista, fin);
-    }
+    pedirLista(rLista);
+    fwrite(&rLista, sizeof(rLista), 1, fLista);
   }
 
   fclose(fLista);
 }
 
-void pedirLista(tRLista &rLista, bool &fin)
+void pedirLista(tRLista &rLista)
 {
-
-  printf("\nInresar datos de una Lista\n");
-  printf("Numero de Lista (0=fin)=");
+  cout << "Ingresar Numero de Lista: ";
   cin >> rLista.numero;
   cin.ignore();
 
-  if (rLista.numero != 0)
-  {
-    fin = false;
-    printf("\nNombre de Lista=");
-    cin.ignore();
-    getline(cin, rLista.nombre);
+  cout << "Ingresar Nombre de Lista: ";
+  getline(cin, rLista.nombreLista);
 
-    for (int i = 0; i < candidatosPorLista; ++i)
-    {
-      printf("\nNombre del candidato %d =", i + 1);
-      getline(cin, rLista.candidatos[i].nombre);
-    }
+  for (int j = 0; j < candidatosPorLista; ++j)
+  {
+    cout << "Ingresar Nombre del candidato " << j + 1 << ": ";
+    getline(cin, rLista.candidatos[j].nombre);
   }
-  else
-    fin = true;
 }
 
 // Punto 3
@@ -150,7 +133,7 @@ void ordenarPorNumeroLista(std::vector<tRVoto> &vVotos, int cantVotos)
 
 void pedirVoto(tRVoto &rVoto)
 {
-  cout << "Ingrese el número de lista votado (entre 1 y 7, 0 en blanco, otros nulos): ";
+  cout << "Ingrese el numero de lista votado (entre 1 y 7, 0 en blanco, otros nulos): ";
   cin >> rVoto.numeroLista;
 
   // if (rVoto.numeroLista < 0 || rVoto.numeroLista > 7)
@@ -169,27 +152,45 @@ void pedirVoto(tRVoto &rVoto)
   cin >> rVoto.edad;
 }
 
-void leerArchivo(const char *nombreArchivo)
+
+int cantRegistrosVotos(FILE *archivo, tRVoto rVoto)
 {
-  FILE *archivo = fopen(nombreArchivo, "rb");
+  
+  int cantRegistros = 0;
+  fseek(archivo, 0, SEEK_END); // nos posicionamos al final del archivo
+  cantRegistros = ftell(archivo) / sizeof(rVoto);
+  return cantRegistros;
+}
 
-  if (archivo == NULL)
+
+int cantRegistrosListas(FILE *archivo, tRLista rLista)
+{
+  
+  int cantRegistros = 0;
+  fseek(archivo, 0, SEEK_END); // nos posicionamos al final del archivo
+  cantRegistros = ftell(archivo) / sizeof(rLista); 
+  return cantRegistros;
+}
+
+void cargarVectoresDesdeArchivo(FILE *archivo, tVecListas vListas, tVecVotos vVotos[])
+{
+  tRLista rLista;
+  tRVoto rVoto;
+
+  int i = 0;
+  int j = 0;
+
+  while (fread(&rLista, sizeof(rLista), 1, archivo) != 0)
   {
-    std::cout << "Error al abrir el archivo." << std::endl;
-    return;
+    vListas[i] = rLista;
+    i++;
   }
 
-  tRVoto votoLeido;
-  while (fread(&votoLeido, sizeof(votoLeido), 1, archivo) == 1)
+  while (fread(&rVoto, sizeof(rVoto), 1, archivo) != 0)
   {
-
-    std::cout << "Número de Lista: " << votoLeido.numeroLista << std::endl;
-    std::cout << "Género: " << votoLeido.genero << std::endl;
-    std::cout << "Edad: " << votoLeido.edad << std::endl;
-    std::cout << std::endl;
+    vVotos[j] = rVoto;
+    j++;
   }
-
-  fclose(archivo);
 }
 
 int main()
@@ -199,11 +200,33 @@ int main()
   cout << "Ingrese la cantidad de votos emitidos: ";
   cin >> cantVotos;
 
-  std::vector<tRVoto> vVotos(cantVotos);
+  tVecListas vListas;
+  tMatrizBanca mBanca;
+
+
+  std::vector<tRVoto> vecVotos(cantVotos); 
 
   guardarListasEnArchivo();
-  guardarVotosEnArchivo(vVotos, cantVotos);
-  leerArchivo("votos.dat");
+  guardarVotosEnArchivo(vecVotos, cantVotos);
+
+  int bFila = sizeof(mBanca) / sizeof(mBanca[0]);
+  int bColumna = sizeof(mBanca[0]) / sizeof(mBanca[0][0]);
+
+  int tamVotos;
+  tRVoto rVoto;
+  FILE *fVotos = fopen("votos.dat", "rb");
+
+  int tamLista;
+  tRLista rLista;
+  FILE *fListas = fopen("listas.dat", "rb");
+
+  tamVotos = cantRegistrosVotos(fVotos, rVoto);
+  tamLista = cantRegistrosListas(fListas, rLista);
+
+  tVecVotos vVotos[tamVotos];
+  tVecListas vListas[tamLista];
+
+  cargarVectoresDesdeArchivo(fListas, vListas, vVotos);
 
   return 0;
 }
