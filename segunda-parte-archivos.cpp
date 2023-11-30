@@ -49,7 +49,8 @@ void pedirVoto(tRVoto &rVoto);
 void ordenarPorNumeroLista(std::vector<tRVoto> &vVotos, int cantVotos);
 
 void imprimirVotos(std::vector<tRVoto> &vVotos, int cantVotos);
-int cantRegistros(FILE *archivo);
+int cantRegistrosVotos(FILE *archivo, tRVoto rVoto);
+int cantRegistrosListas(FILE *archivo, tRLista rLista);
 void cargarVectoresDesdeArchivo(FILE *archivo, tVecListas vListas, tVecVotos vVotos[]);
 
 // Punto 2
